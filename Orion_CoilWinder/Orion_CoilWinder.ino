@@ -2,6 +2,7 @@
 #include <SPI.h>
 
 #define PIN_SW 2
+#define PIN_TOGGLE 3
 #define PIN_POT A0
 
 #define PIN_STEPPER_BUSY 9
@@ -20,6 +21,7 @@ void setup()
   pinMode(PIN_STEPPER_BUSY, OUTPUT);
 
   pinMode(PIN_SW, INPUT_PULLUP);
+  pinMode(PIN_TOGGLE, INPUT_PULLUP);
   pinMode(PIN_POT, INPUT);
 
   SPI.begin();
@@ -71,7 +73,11 @@ void loop()
   Serial.println();
   if (digitalRead(PIN_SW) == 0)
   {
-    driver.run(REV, analogRead(PIN_POT) * 2); // 2000step/s出すには20Vぐらい必要だった
+    if(digitalRead(PIN_TOGGLE)){
+      driver.run(REV, analogRead(PIN_POT) * 2); // 2000step/s出すには20Vぐらい必要だった
+    }else{
+      driver.run(FWD, analogRead(PIN_POT) * 2); // 2000step/s出すには20Vぐらい必要だった
+    }
   }
   else
   {
