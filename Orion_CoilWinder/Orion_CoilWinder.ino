@@ -74,9 +74,9 @@ void loop()
   if (digitalRead(PIN_SW) == 0)
   {
     if(digitalRead(PIN_TOGGLE)){
-      driver.run(REV, analogRead(PIN_POT) * 2); // 2000step/s出すには20Vぐらい必要だった
+      driver.run(REV, analogRead(PIN_POT) * 4); // 2000step/s出すには20Vぐらい必要だった
     }else{
-      driver.run(FWD, analogRead(PIN_POT) * 2); // 2000step/s出すには20Vぐらい必要だった
+      driver.run(FWD, analogRead(PIN_POT) * 4); // 2000step/s出すには20Vぐらい必要だった
     }
   }
   else
