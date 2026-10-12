@@ -46,7 +46,7 @@ if ($LASTEXITCODE -eq 0) { & .\tests\button_test.exe }
 1. `Config.h` の `demo = true` でビルドしてUSBから書き込む。
 2. 画面位置・色・太字・下線・反転・折り返し・ちらつきを確認する。
 3. `demo = false` に戻して再ビルド・書き込みする。
-4. 電源を切ってSTM32 TXとESP32 GPIO18、GNDを接続し、USB給電で起動する。
+4. 電源を切ってSTM32 TXとConfig.h指定のRX（現在GPIO18）、GNDを接続し、USB給電で起動する。
 5. STM32または3.3V USB-UARTから2 Mbps/8N1で以下を送る。
    `ESC` は実際のbyte 0x1Bを使用する（文字列「ESC」ではない）。
 
@@ -60,38 +60,31 @@ ESC[31mUNDER_VOLTAGE ESC[33mWARN ESC[36mCAM ESC[0m\r\n
 8. 実際の周期・最大長で連続送信し、最新状態の表示と `RXerr` を確認する。
 9. RXを外したときに最後の完成行が残ることを確認する。
 
-## 検証記録（2026-10-12）
+## 検証状態（2026-10-12、FW 0.2.8）
 
-- PC解析テスト: 成功（LLVM clang++、C++17、警告をエラーとして扱う）。
-- ESP32ビルド: 成功。esp32 core 3.2.0、GFX Library for Arduino 1.6.3。
-  `tools/build.ps1` 経由でも成功。USB管理口追加後はFlash 415,690 byte、静的RAM 84,492 byte。
-  キャンバス等の実行時確保は静的RAMの数値に含まれない。
-- 実機: COM37、USB Serial/JTAG VID=303A/PID=1001、USBシリアル `1C:DB:D4:79:78:94`。
-  ESP32-S3 revision v0.2、Flash 16 MB、PSRAM 8 MBを読出し確認。
-- 初回書き込み: 4領域のハッシュ検証成功。esptool 5.5.0のウォッチドッグリセットで
-  手動ROM起動から通常起動へ移行。Windowsの再列挙時にツールのポート例外が出たが、
-  続けてUSB INFOでFW 0.1.0・Flash 16 MB・PSRAM 8 MB・稼働時間を取得。
-  この条件を更新スクリプトで扱うよう修正し、判定テストを追加。
-- 通常更新: `tools/update.ps1 -Port COM37` で成功（終了コード0）。
-  ボタン操作なしでUSBからROMへ移行、4領域の書き込み検証、再起動まで完了。
-  `Boot verified` 応答でFW 0.1.0、Flash 16 MB、PSRAM 8 MB、再起動後の稼働時間899 msを確認。
-- 更新判定テスト: 5件成功。公式Windows版esptoolのZIPも配布元のSHA-256に一致。
-- LCDの目視・UART 2 Mbps連続受信・バッテリーでの電源保持: 未確認。
-- `4WS_MainFW`との結合: STM32出力が未実装のため未確認。
+| 項目 | 確認結果 |
+| --- | --- |
+| ANSI解析・折り返し | PCテスト成功 |
+| ボタン処理 | チャタリング、長押し、再押下、起動時押下、時刻桁あふれのPCテスト成功 |
+| USB更新判定 | 対象選択と書き込み失敗判定のテスト成功 |
+| ESP32ビルド | esp32 core 3.2.0、GFX Library for Arduino 1.6.3で成功 |
+| メモリ使用量 | Flash 417,994 byte、静的RAM 84,540 byte。実行時確保分は含まない |
+| 実機 | ESP32-S3 revision v0.2、Flash 16 MB、PSRAM 8 MB |
+| USB | COM37、VID=303A/PID=1001、シリアル `1C:DB:D4:79:78:94` |
+| 通常更新 | ボタン操作なしの書き込み、4領域のハッシュ検証、自動再起動、INFOによる起動確認に成功 |
+| 内部ループバック | ANSI付き34 byteを受信し、UART通知エラー0。緑・太字の20文字をLCD上で確認 |
+| STM32接続 | G474_Orion_main、PA2 TX→GPIO18、PA3 RX←GPIO17、GND直接接続。他機器のTX/RX接続なし |
+| 継続受信 | 約61.8秒で951,060 byte・3,861完成行。UART通知エラーは全種類0 |
+| 表示 | STM32ログと文字属性を確認。ユーザーによる画面の目視確認済み |
+| BOOT操作 | 送信回数の増加とSTM32のMOUSE→VEL thetaページ変更を確認 |
+| TX待機状態 | 各観測時点でTXOE=0 |
+| ログ保存 | `doc/measurements/`へ保存し、Gitのignore対象とする |
 
-### FW 0.2.0追加分
+## 残る確認事項
 
-- ボタン処理テスト成功。既存の解析テストとUSB更新判定5件も成功。
-- ビルド成功: Flash 416,354 byte、静的RAM 84,508 byte。
-- COM37へUSB自動書き込み成功、4領域のハッシュ検証と通常再起動を確認。
-  USB INFOでFW 0.2.0、PSRAM 8 MB、`NEXT=0 TXOE=0` を取得。
-- Espressif IDF v5.4のGPIOドライバも確認し、ODを設定してからUART出力を接続する順序にした。
-  `gpio_set_direction()` のGPIO Matrix再設定と、OD有効化前の出力を避ける。
-- 物理配線の追加、実ボタンによるSTM32 IDX切り替え、送信波形、並列送信機との電気的確認は未実施。
-
-### FW 0.2.1追加分
-
-- RXをGPIO44からGPIO18へ変更。TXはGPIO17のまま。
-- ビルド・COM37への書き込み・4領域のハッシュ検証・自動再起動が成功。
-  USB INFOでFW 0.2.1、`NEXT=0 TXOE=0` を取得。
-- GPIO18への配線変更と実UART受信、STM32ログ送信中のROM書き込みは未確認。
+- 一部の行に文字化け・文字欠落が残る。UART通知エラー0は無誤りを保証しない。
+- 1押下につき1IDXの厳密な照合、LF送信波形、PUの立ち上がり時間は未測定。
+- 実機は外部PUなしでSTM32内蔵PUを利用し、ページ変更が動作した。外部PUを備えた設計条件での波形と通信品質は未検証。
+- 並列送信機、長い配線、別電源条件、バッテリーでの電源保持は未検証。
+- 画面上限・行上限からの復帰、下線・反転、ちらつきの網羅的な実機確認は未実施。
+- `4WS_MainFW`はデバッグ出力・IDX処理が未実装のため、結合動作は未確認。

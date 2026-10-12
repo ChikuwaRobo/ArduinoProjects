@@ -46,7 +46,9 @@ def info(port):
 
 
 def esptool(*arguments, allow_reset_disconnect=False):
-    command = [str(ESPTOOL_EXE)] if ESPTOOL_EXE.is_file() else [sys.executable, "-m", "esptool"]
+    if not ESPTOOL_EXE.is_file():
+        raise RuntimeError("Run tools/setup-flash.ps1 to install the pinned Windows esptool")
+    command = [str(ESPTOOL_EXE)]
     result = subprocess.run([*command, *arguments],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, encoding="utf-8", errors="replace",

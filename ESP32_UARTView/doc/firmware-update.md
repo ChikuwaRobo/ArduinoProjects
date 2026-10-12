@@ -11,7 +11,7 @@ STM32のデバッグUARTとは別のUSB Serial/JTAG経由で更新する。
 ## HW確認
 
 [公式V2回路図](https://files.waveshare.com/wiki/ESP32-S3-LCD-1.69/ESP32-S3-LCD-1.69-sch_V2.pdf)
-をPDFから読み取り、回路図画像でもUSB・KEYS・電源回路を確認した。
+に基づくHW仕様と実機で確認した情報を以下に示す。
 実機のリビジョン表記自体は未確認で、V2回路図に基づく配線情報と実機読出しを区別する。
 
 | 項目 | 確認した仕様 | 更新への影響 |
@@ -23,7 +23,7 @@ STM32のデバッグUARTとは別のUSB Serial/JTAG経由で更新する。
 | USB機器 | 実機: VID=303A、PID=1001 | USB Serial/JTAG。通常の更新経路 |
 | BOOT | 回路図Key1: GPIO0をGNDへ接続、10 kΩプルアップ | GPIO0 LOWでリセットするとROM書き込みモード |
 | RESET | 回路図Key3: CHIP_PUをGNDへ接続 | 手動のフルリセット。通常更新では使用しない |
-| UART端子 | 回路図P2: TX=GPIO43、RX=GPIO44 | ROM UART0との共有を避け、表示用UART1はGPIO18 RX、GPIO17 TXを使う。U0TXD/U0RXDは接続しない |
+| UART端子 | 回路図P2: TX=GPIO43、RX=GPIO44 | 表示用UART1はGPIO18 RX、GPIO17 TX。U0TXD/U0RXDは接続しない。GPIO44はROM UART0 RXと共有 |
 | 電源 | USB VBUSとバッテリーの電源経路、SYS_EN=GPIO41 | 初回・更新確認はUSB給電。バッテリー単独ではPC更新不可 |
 
 実機検出時のポートはCOM37、USBシリアルは `1C:DB:D4:79:78:94`。
@@ -58,9 +58,7 @@ USB Serial/JTAGの通常リセットはコアリセットで、起動ストラ�
 [esptoolのリセット仕様](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/esptool/advanced-options.html)
 を参照。GPIO0が物理的にLOW固定のままなら、ソフトウェアだけでは通常起動へ戻せない。
 
-Arduino core 3.2.0付属ツールは配置フォルダ名が4.9.dev3だが、実行表示はesptool 4.8.1。
-このツールには `watchdog-reset` 選択肢がないため、更新専用に **esptool 5.5.0** を固定して用意する。
-Arduino coreの入替えは不要。
+更新には **esptool 5.5.0の公式Windows版**を使用する。
 
 ## PCの準備（初回のみ）
 
@@ -79,8 +77,7 @@ Pythonのpyserialがなければ導入する。esptool本体のPython依存パ�
 
 ## 初回書き込み
 
-現在ユーザーが準備した書き込みモードのまま、以下を実行する。
-ここでRESETを押して準備状態を変える必要はない。
+ROM書き込みモードで起動し、BOOTを放した状態で以下を実行する。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\update.ps1 -Initial

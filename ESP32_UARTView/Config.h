@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 namespace config {
-constexpr const char *firmwareVersion = "0.2.1";
+constexpr const char *firmwareVersion = "0.2.8";
 constexpr uint32_t baud = 2000000;
-// ROMのUART0 RX（GPIO44）へSTM32のログを入れないため、外部GPIO端子を使う。
+// 現在の実配線に合わせ、ROM UART0から独立したGPIO18を使う。
 constexpr int rx = 18;
 // GPIO43はROMのUART0 TX。起動中の競合を避けるため外部GPIO端子を使う。
 constexpr int tx = 17;

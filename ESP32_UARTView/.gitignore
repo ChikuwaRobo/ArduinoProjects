@@ -3,3 +3,4 @@ build/
 tests/*.exe
 tests/*.obj
 __pycache__/
+doc/measurements/
