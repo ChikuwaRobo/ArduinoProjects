@@ -1,0 +1,5 @@
+build/
+.tools/
+tests/*.exe
+tests/*.obj
+__pycache__/
