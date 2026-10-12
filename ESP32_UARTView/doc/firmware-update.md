@@ -23,7 +23,7 @@ STM32のデバッグUARTとは別のUSB Serial/JTAG経由で更新する。
 | USB機器 | 実機: VID=303A、PID=1001 | USB Serial/JTAG。通常の更新経路 |
 | BOOT | 回路図Key1: GPIO0をGNDへ接続、10 kΩプルアップ | GPIO0 LOWでリセットするとROM書き込みモード |
 | RESET | 回路図Key3: CHIP_PUをGNDへ接続 | 手動のフルリセット。通常更新では使用しない |
-| UART端子 | 回路図P2: TX=GPIO43、RX=GPIO44 | GPIO44は表示用UART1 RXへ再割当。USB更新には使わない |
+| UART端子 | 回路図P2: TX=GPIO43、RX=GPIO44 | ROM UART0との共有を避け、表示用UART1はGPIO18 RX、GPIO17 TXを使う。U0TXD/U0RXDは接続しない |
 | 電源 | USB VBUSとバッテリーの電源経路、SYS_EN=GPIO41 | 初回・更新確認はUSB給電。バッテリー単独ではPC更新不可 |
 
 実機検出時のポートはCOM37、USBシリアルは `1C:DB:D4:79:78:94`。

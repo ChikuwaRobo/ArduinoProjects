@@ -7,13 +7,17 @@ LFで確定した1行を1画面に折り返し、ANSIの色・太字を文字ご
 
 | 信号 | 4WS_MainFW | ESP32-S3-LCD-1.69 |
 | --- | --- | --- |
-| デバッグTX（LPUART1） | PC1 | RXD / GPIO44 |
+| デバッグTX（LPUART1） | PC1 | GPIO18（ESP32が受信） |
+| IDX切り替えRX（LPUART1） | PC0 | GPIO17（ESP32から送信） |
 | GND | GND | GND |
 | 電源 | 各基板を個別給電 | USB Type-C |
 
 3.3V TTL UART、**2,000,000 baud、8N1、フロー制御なし**。RS-232や5V信号は直結しない。
-ESP32のTXは未使用で、STM32のRXへの接続は不要。
-参考機 `G474_Orion_main` を接続するときは **PA2（LPUART1_TX）** を使用する。
+送信線（GPIO17→STM32 RX）は **3.3Vへ1～2.2 kΩで外部プルアップ**する。
+ESP32の送信はオープンドレイン。内蔵PUのみでは2 Mbpsの立ち上がり時間を保証できない。
+基板の「TX」端子（GPIO43）はROM起動時のUART0出力があるため、この送信線には使わない。
+基板の「RX」端子（GPIO44）もROMのUART0受信と共有されるため、表示用RXにはGPIO18を使う。
+参考機 `G474_Orion_main` を接続するときは **PA2 TX→GPIO18、PA3 RX←GPIO17**。
 基板のリビジョンと実際のコネクタ表示を確認して接続する。
 
 `4WS_MainFW`はLPUART1の設定があるが、デバッグ文字列出力は未実装。
@@ -56,6 +60,19 @@ FW更新は [doc/firmware-update.md](doc/firmware-update.md) に従う。
 - `RXerr` はUARTドライバが通知した受信異常の回数。異常後は次のLFまで破棄して再同期。
 - `Config.h` の `demo = true` でSTM32なしの表示確認が可能。通常は `false`。
 
+## ボタン操作とIDX切り替え
+
+BOOTボタンを押すとLF（0x0A）を1バイト送信する。参考STM32では次のIDXへ進む。
+25 msのチャタリング除去、長押しリピートなし。起動時に押されていた場合は、放してからの再押下で送信する。
+PWRとRESETにはIDX操作を割り当てない。デモモードでは送信しない。
+`4WS_MainFW`側の受信・IDX処理は未実装なので、同FWとの結合動作はまだ未確認。
+
+非送信時のGPIO17は **入力＋PU（出力無効）**。送信中もLOWのみ駆動し、HIGHはプルアップで作る。
+並列接続する他の送信機も待機中は出力を解放する必要がある。
+通常のプッシュプルUART TXをそのまま並列接続すると、他の送信機のHIGHとLOWが競合する。
+同時送信の調停は実装していないため、送信タイミングは機器間で分ける。
+USBの `INFO` 応答に送信回数 `NEXT` とGPIO17の出力有効ビット `TXOE` を含める。待機時は `TXOE=0`。
+
 仕様・対応ANSI・制限は [doc/design.md](doc/design.md)、確認手順は [doc/verification.md](doc/verification.md)。
 
 ## ファイル
@@ -65,6 +82,7 @@ FW更新は [doc/firmware-update.md](doc/firmware-update.md) に従う。
 | `ESP32_UARTView.ino` | LCD初期化、受信タスク、最新行共有、描画 |
 | `Config.h` | UART/LCDピン、通信速度、更新周期、デモ選択 |
 | `Terminal.h` | ANSI解析、文字属性、行バッファ、折り返し |
+| `Button.h` | チャタリング除去と押下イベント |
 | `tests/terminal_test.cpp` | ホスト上の解析・境界テスト |
 | `tools/build.ps1` | ESP32向けコンパイル |
 | `tools/update.ps1` / `tools/usb_update.py` | USB自動更新と起動確認 |

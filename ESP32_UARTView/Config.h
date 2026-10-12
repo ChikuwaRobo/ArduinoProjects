@@ -3,9 +3,14 @@
 #include <stddef.h>
 #include <stdint.h>
 namespace config {
-constexpr const char *firmwareVersion = "0.1.0";
+constexpr const char *firmwareVersion = "0.2.1";
 constexpr uint32_t baud = 2000000;
-constexpr int rx = 44;
+// ROMのUART0 RX（GPIO44）へSTM32のログを入れないため、外部GPIO端子を使う。
+constexpr int rx = 18;
+// GPIO43はROMのUART0 TX。起動中の競合を避けるため外部GPIO端子を使う。
+constexpr int tx = 17;
+constexpr int nextButton = 0; // BOOT、押下時LOW
+constexpr uint32_t debounceMs = 25;
 constexpr int lcdDc = 4, lcdCs = 5, lcdSck = 6, lcdMosi = 7;
 constexpr int lcdReset = 8, lcdBacklight = 15;
 constexpr int powerEnable = 41;

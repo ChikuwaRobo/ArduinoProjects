@@ -21,12 +21,32 @@ python -m unittest discover -s .\tests -p test_usb_update.py
 複数機器の自動選択禁止、VID/PIDの確認、未完了書き込みの失敗判定、
 4領域の検証後に限るリセット時USB切断の扱いを確認する。
 
+ボタン処理のテスト:
+
+```powershell
+& "C:\Program Files\LLVM\bin\clang++.exe" -std=c++17 -Wall -Wextra -Werror .\tests\button_test.cpp -o .\tests\button_test.exe
+if ($LASTEXITCODE -eq 0) { & .\tests\button_test.exe }
+```
+
+押下バウンス、25 msの確定時間、長押し、再押下、起動時の押しっぱなし、millisの桁あふれを確認する。
+
+## ボタン・TXの実機確認手順
+
+1. GPIO17→STM32 RX（4WSではPC0、参考機ではPA3）を接続し、共有GNDと3.3Vへの外部PUを用意する。
+2. 起動後にUSB INFOの `NEXT=0 TXOE=0` を確認する。
+3. BOOTを1回押して、`NEXT` が1増え、STM32のIDXが1つ進むことを確認する。
+4. 長押しで繰り返さず、放して再び押すともう1回進むことを確認する。
+5. ロジックアナライザーで2 Mbps/8N1、送信内容がLF 1 byteであることを確認する。
+6. オシロスコープでHIGHの立ち上がりが0.5 µsのbit時間に対して十分速いことを確認する。
+7. 待機時にGPIO17がHIGHを能動駆動せず、送信終了後も `TXOE=0` へ戻ることを確認する。
+8. 他の送信機から単独送信できることを確認する。同時送信は行わない。
+
 ## 実機での確認手順
 
 1. `Config.h` の `demo = true` でビルドしてUSBから書き込む。
 2. 画面位置・色・太字・下線・反転・折り返し・ちらつきを確認する。
 3. `demo = false` に戻して再ビルド・書き込みする。
-4. 電源を切ってSTM32 TXとESP32 GPIO44、GNDを接続し、USB給電で起動する。
+4. 電源を切ってSTM32 TXとESP32 GPIO18、GNDを接続し、USB給電で起動する。
 5. STM32または3.3V USB-UARTから2 Mbps/8N1で以下を送る。
    `ESC` は実際のbyte 0x1Bを使用する（文字列「ESC」ではない）。
 
@@ -58,3 +78,20 @@ ESC[31mUNDER_VOLTAGE ESC[33mWARN ESC[36mCAM ESC[0m\r\n
 - 更新判定テスト: 5件成功。公式Windows版esptoolのZIPも配布元のSHA-256に一致。
 - LCDの目視・UART 2 Mbps連続受信・バッテリーでの電源保持: 未確認。
 - `4WS_MainFW`との結合: STM32出力が未実装のため未確認。
+
+### FW 0.2.0追加分
+
+- ボタン処理テスト成功。既存の解析テストとUSB更新判定5件も成功。
+- ビルド成功: Flash 416,354 byte、静的RAM 84,508 byte。
+- COM37へUSB自動書き込み成功、4領域のハッシュ検証と通常再起動を確認。
+  USB INFOでFW 0.2.0、PSRAM 8 MB、`NEXT=0 TXOE=0` を取得。
+- Espressif IDF v5.4のGPIOドライバも確認し、ODを設定してからUART出力を接続する順序にした。
+  `gpio_set_direction()` のGPIO Matrix再設定と、OD有効化前の出力を避ける。
+- 物理配線の追加、実ボタンによるSTM32 IDX切り替え、送信波形、並列送信機との電気的確認は未実施。
+
+### FW 0.2.1追加分
+
+- RXをGPIO44からGPIO18へ変更。TXはGPIO17のまま。
+- ビルド・COM37への書き込み・4領域のハッシュ検証・自動再起動が成功。
+  USB INFOでFW 0.2.1、`NEXT=0 TXOE=0` を取得。
+- GPIO18への配線変更と実UART受信、STM32ログ送信中のROM書き込みは未確認。
